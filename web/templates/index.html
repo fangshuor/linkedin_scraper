@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爬虫管理面板</title>
+    <script>
+        function checkDuplicates() {
+            fetch('/check_duplicates')
+                .then(res => res.json())
+                .then(data => alert("重复 ABN: " + JSON.stringify(data.duplicates)))
+                .catch(err => alert("查重失败"));
+        }
+
+        function exportData() {
+            let type = document.getElementById("export_type").value;
+            let amount = document.getElementById("export_amount").value;
+
+            let formData = new FormData();
+            formData.append("type", type);
+            formData.append("amount", amount);
+
+            fetch("/export", { method: "POST", body: formData })
+                .then(res => res.blob())
+                .then(blob => {
+                    let a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "exported_data.xlsx";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                })
+                .catch(err => alert("导出失败"));
+        }
+
+        function cleanDB() {
+            fetch("/clean_db", { method: "POST" })
+                .then(res => res.json())
+                .then(data => alert("数据库清理完成"))
+                .catch(err => alert("清理失败"));
+        }
+    </script>
+</head>
+<body>
+    <h2>爬虫管理面板</h2>
+    <p>存储空间: {{ db_status.db_size }} MB</p>
+    <p>已爬取房产中介: {{ db_status.total_agents }}</p>
+    <p>已查询 ABN 公司: {{ db_status.total_companies }}</p>
+
+    <button onclick="checkDuplicates()">一键查重</button>
+    <button onclick="cleanDB()">清理数据库</button>
+
+    <h3>导出数据</h3>
+    <select id="export_type">
+        <option value="latest">最近 N 条</option>
+        <option value="days">最近 N 天</option>
+    </select>
+    <input type="number" id="export_amount" placeholder="输入数量">
+    <button onclick="exportData()">导出</button>
+</body>
+</html>
