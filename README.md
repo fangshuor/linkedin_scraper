@@ -1,3 +1,4 @@
+```
 linkedin_scraper/
 │── config/
 │   ├── settings.py        # 配置文件，存放代理池、User-Agent池、数据库信息等
@@ -13,3 +14,4 @@ linkedin_scraper/
 │── requirements.txt       # 依赖库清单
 │── deploy.sh              # 一键部署脚本
 │── README.md              # 项目介绍和使用说明
+```
