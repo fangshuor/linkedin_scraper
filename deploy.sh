@@ -38,7 +38,7 @@ if [ ! -d "$PROJECT_DIR" ]; then
 else
     echo "🔄 代码已存在，更新代码..."
     cd $PROJECT_DIR
-    sudo git pull
+    sudo git pull origin main
 fi
 
 # 进入项目目录
