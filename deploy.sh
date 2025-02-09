@@ -14,7 +14,7 @@ echo "📢 开始部署爬虫系统..."
 # 更新系统 & 安装基础软件
 echo "📦 更新系统 & 安装依赖..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git $PYTHON_VERSION $PYTHON_VERSION-pip
+sudo apt install -y git $PYTHON_VERSION $PYTHON_VERSION-pip python3-venv
 
 # 检查 MySQL 是否已安装
 if ! command -v mysql &> /dev/null; then
@@ -44,9 +44,16 @@ fi
 # 进入项目目录
 cd $PROJECT_DIR
 
-# 创建虚拟环境
+# 创建虚拟环境（如果不存在）
 if [ ! -d "venv" ]; then
     echo "🐍 创建 Python 虚拟环境..."
+    $PYTHON_VERSION -m venv venv
+fi
+
+# 确保虚拟环境存在
+if [ ! -f "venv/bin/activate" ]; then
+    echo "⚠️  发现虚拟环境丢失，重新创建..."
+    rm -rf venv
     $PYTHON_VERSION -m venv venv
 fi
 
