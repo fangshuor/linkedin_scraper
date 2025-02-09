@@ -4,7 +4,7 @@
 set -e
 
 # 变量
-GITHUB_REPO="你的GitHub仓库链接"
+GITHUB_REPO="github.com/fangshuor/linkedin_scraper"
 PROJECT_DIR="/opt/linkedin_scraper"
 PYTHON_VERSION="python3"
 
