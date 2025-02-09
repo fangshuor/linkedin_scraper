@@ -4,6 +4,7 @@ import os
 # 日志文件路径
 LOG_FILE = "/opt/linkedin_scraper/logs/scraper.log"
 
+# 创建日志目录
 if not os.path.exists("/opt/linkedin_scraper/logs"):
     os.makedirs("/opt/linkedin_scraper/logs")
 
