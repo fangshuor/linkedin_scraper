@@ -1,10 +1,50 @@
 import sqlite3
 import pymysql
-from config.settings import DB_CONFIG, log_info, log_error
+import os
+from config.settings import log_info, log_error
+
+# =============================
+# 🔹 自动检测数据库配置
+# =============================
+
+DB_CONFIG = {
+    "type": "mysql",  # 默认使用 MySQL
+    "sqlite_path": "/opt/linkedin_scraper/database.db",  # SQLite 备选
+    "mysql": {
+        "host": "localhost",
+        "user": "root",
+        "password": "linkedin_scraper_pass",
+        "database": "linkedin_scraper",
+    },
+}
+
+
+# 检查 MySQL 是否可用
+def check_mysql():
+    try:
+        conn = pymysql.connect(
+            host=DB_CONFIG["mysql"]["host"],
+            user=DB_CONFIG["mysql"]["user"],
+            password=DB_CONFIG["mysql"]["password"],
+        )
+        conn.close()
+        return True
+    except pymysql.MySQLError:
+        return False
+
+
+# 如果 MySQL 不可用，切换到 SQLite
+if not check_mysql():
+    log_error("MySQL 不可用，切换到 SQLite")
+    DB_CONFIG["type"] = "sqlite"
+
+# =============================
+# 🔹 数据库连接
+# =============================
 
 
 def connect_db():
-    """根据配置连接数据库（MySQL / SQLite）"""
+    """连接数据库"""
     if DB_CONFIG["type"] == "mysql":
         try:
             conn = pymysql.connect(
@@ -14,19 +54,24 @@ def connect_db():
                 database=DB_CONFIG["mysql"]["database"],
                 charset="utf8mb4",
             )
-            log_info("成功连接到 MySQL 数据库")
+            log_info("成功连接 MySQL")
             return conn
         except pymysql.MySQLError as e:
-            log_error(f"MySQL 连接错误: {e}")
+            log_error(f"MySQL 连接失败: {e}")
             return None
     else:
         try:
             conn = sqlite3.connect(DB_CONFIG["sqlite_path"])
-            log_info("成功连接到 SQLite 数据库")
+            log_info("成功连接 SQLite")
             return conn
         except sqlite3.Error as e:
-            log_error(f"SQLite 连接错误: {e}")
+            log_error(f"SQLite 连接失败: {e}")
             return None
+
+
+# =============================
+# 🔹 创建数据库表
+# =============================
 
 
 def create_tables():
@@ -37,8 +82,24 @@ def create_tables():
 
     cursor = conn.cursor()
 
-    # `agents` 表（LinkedIn 爬取的数据）
-    create_agents_table = """
+    # `agents` 表（LinkedIn 爬取数据）
+    create_agents_table = (
+        """
+    CREATE TABLE IF NOT EXISTS agents (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100),
+        company VARCHAR(100),
+        location VARCHAR(100),
+        phone VARCHAR(100),
+        email VARCHAR(100),
+        company_email VARCHAR(100),
+        address VARCHAR(100),
+        abn VARCHAR(100),
+        company_website VARCHAR(100)
+    );
+    """
+        if DB_CONFIG["type"] == "mysql"
+        else """
     CREATE TABLE IF NOT EXISTS agents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT(100),
@@ -52,9 +113,25 @@ def create_tables():
         company_website TEXT(100)
     );
     """
+    )
 
     # `company_details` 表（ABN 查询结果）
-    create_company_table = """
+    create_company_table = (
+        """
+    CREATE TABLE IF NOT EXISTS company_details (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        abn VARCHAR(100) UNIQUE,
+        entity_name VARCHAR(100),
+        abn_status VARCHAR(100),
+        entity_type VARCHAR(100),
+        gst_status VARCHAR(100),
+        main_location VARCHAR(100),
+        business_names VARCHAR(255),
+        trading_names VARCHAR(255)
+    );
+    """
+        if DB_CONFIG["type"] == "mysql"
+        else """
     CREATE TABLE IF NOT EXISTS company_details (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         abn TEXT(100) UNIQUE,
@@ -67,58 +144,15 @@ def create_tables():
         trading_names TEXT(255)
     );
     """
+    )
 
     try:
         cursor.execute(create_agents_table)
         cursor.execute(create_company_table)
         conn.commit()
-        log_info("数据库表检查完成")
+        log_info("数据库表初始化完成")
     except Exception as e:
         log_error(f"创建数据表失败: {e}")
-    finally:
-        conn.close()
-
-
-def save_company_details(details):
-    """存储 ABN 查询到的公司详细信息"""
-    conn = connect_db()
-    if not conn:
-        return
-
-    cursor = conn.cursor()
-
-    insert_sql = """
-    INSERT INTO company_details (abn, entity_name, abn_status, entity_type, gst_status, main_location, business_names, trading_names) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(abn) DO UPDATE SET
-    entity_name = excluded.entity_name,
-    abn_status = excluded.abn_status,
-    entity_type = excluded.entity_type,
-    gst_status = excluded.gst_status,
-    main_location = excluded.main_location,
-    business_names = excluded.business_names,
-    trading_names = excluded.trading_names;
-    """
-
-    try:
-        cursor.execute(
-            insert_sql,
-            (
-                details["abn"],
-                details["entity_name"],
-                details["abn_status"],
-                details["entity_type"],
-                details["gst_status"],
-                details["main_location"],
-                details["business_names"],
-                details["trading_names"],
-            ),
-        )
-
-        conn.commit()
-        log_info(f"成功存储 ABN 数据: {details['abn']}")
-    except Exception as e:
-        log_error(f"存储 ABN 数据失败: {e}")
     finally:
         conn.close()
 

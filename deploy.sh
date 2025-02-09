@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# 设置错误中断
 set -e
 
 # 变量
-GITHUB_REPO="github.com/fangshuor/linkedin_scraper"
+GITHUB_REPO="https://github.com/fangshuor/linkedin_scraper.git"
 PROJECT_DIR="/opt/linkedin_scraper"
 PYTHON_VERSION="python3"
+MYSQL_ROOT_PASS="linkedin_scraper_pass"
+MYSQL_DB_NAME="linkedin_scraper"
 
 echo "📢 开始部署爬虫系统..."
 
@@ -14,6 +15,21 @@ echo "📢 开始部署爬虫系统..."
 echo "📦 更新系统 & 安装依赖..."
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y git $PYTHON_VERSION $PYTHON_VERSION-pip
+
+# 检查 MySQL 是否已安装
+if ! command -v mysql &> /dev/null; then
+    echo "💾 MySQL 未安装，开始安装..."
+    sudo apt install -y mysql-server
+    sudo systemctl enable mysql
+    sudo systemctl start mysql
+fi
+
+# 设置 MySQL
+echo "🔧 配置 MySQL..."
+sudo mysql -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DB_NAME;"
+sudo mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY '$MYSQL_ROOT_PASS';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON $MYSQL_DB_NAME.* TO 'root'@'localhost';"
+sudo mysql -e "FLUSH PRIVILEGES;"
 
 # 克隆 GitHub 仓库
 if [ ! -d "$PROJECT_DIR" ]; then
@@ -43,59 +59,13 @@ echo "📦 安装 Python 依赖..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 配置 MySQL（可选，按需修改）
+# 配置数据库
 echo "💾 初始化数据库..."
 $PYTHON_VERSION -c "from src.storage import create_tables; create_tables()"
 
-# 设置爬虫服务（Gunicorn + Supervisor）
-echo "🛠 配置爬虫 & Web 服务器..."
-
-# 爬虫启动脚本
-cat <<EOF | sudo tee /etc/systemd/system/linkedin_scraper.service
-[Unit]
-Description=LinkedIn Scraper Service
-After=network.target
-
-[Service]
-User=root
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$PROJECT_DIR/venv/bin/python3 $PROJECT_DIR/src/scraper.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Web 服务器启动脚本
-cat <<EOF | sudo tee /etc/systemd/system/linkedin_web.service
-[Unit]
-Description=LinkedIn Web Interface
-After=network.target
-
-[Service]
-User=root
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:5000 web.app:app
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# 重新加载 systemd & 启动服务
-sudo systemctl daemon-reload
-sudo systemctl enable linkedin_scraper
-sudo systemctl enable linkedin_web
+# 启动爬虫服务
 sudo systemctl restart linkedin_scraper
 sudo systemctl restart linkedin_web
-
-# 防火墙设置（如果使用 UFW）
-echo "🔒 配置防火墙（如适用）..."
-if command -v ufw >/dev/null 2>&1; then
-    sudo ufw allow 5000/tcp
-    sudo ufw allow 22/tcp
-    sudo ufw enable
-fi
 
 echo "🚀 部署完成！"
 echo "🔗 Web 界面: http://<服务器IP>:5000"
