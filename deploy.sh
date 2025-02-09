@@ -48,6 +48,9 @@ function install_scraper() {
         sudo systemctl start mysql
     fi
 
+    # 确保 MySQL 运行正常
+    sudo systemctl restart mysql || true
+
     # 配置 MySQL 数据库
     echo "🔧 配置 MySQL..."
     sudo mysql -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DB_NAME;"
