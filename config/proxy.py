@@ -1,25 +1,40 @@
 import random
 import os
+from config.logger import log_info, log_error  # ✅ 直接引入 logger 以避免循环导入
 
-PROXY_FILE = "config/proxy.txt"
-PROXY_LIST = []
+# 代理列表存储文件
+PROXY_FILE = "/opt/linkedin_scraper/config/proxy.txt"
+
+# 代理列表（从 proxy.txt 读取）
+proxies = []
 
 
+# 读取代理文件
 def load_proxies():
-    """从 proxy.txt 加载代理并缓存"""
-    global PROXY_LIST
+    """从 proxy.txt 读取代理列表"""
+    global proxies
     if os.path.exists(PROXY_FILE):
-        with open(PROXY_FILE, "r") as file:
-            PROXY_LIST = [line.strip() for line in file.readlines() if line.strip()]
-        print(f"[INFO] 已加载 {len(PROXY_LIST)} 个代理")
-    else:
-        print("[WARNING] 未找到 proxy.txt，默认使用直连模式")
+        with open(PROXY_FILE, "r") as f:
+            proxies = [line.strip() for line in f.readlines() if line.strip()]
+        log_info(f"已加载 {len(proxies)} 个代理")
 
 
+load_proxies()  # 启动时加载
+
+
+# 获取随机代理
 def get_random_proxy():
-    """从代理池随机选择一个代理，如果池为空则返回 None"""
-    return random.choice(PROXY_LIST) if PROXY_LIST else None
+    """返回一个随机代理"""
+    if proxies:
+        return random.choice(proxies)
+    return None
 
 
-# 启动时加载代理
-load_proxies()
+# 代理开关（从 settings.py 控制）
+USE_PROXY = True
+
+
+# 代理获取逻辑
+def get_proxy():
+    """如果启用代理，则返回随机代理，否则返回 None"""
+    return get_random_proxy() if USE_PROXY else None

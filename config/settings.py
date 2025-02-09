@@ -1,8 +1,8 @@
 import os
-from config.proxy import get_random_proxy  # 代理管理
-from config.cookies import get_cookies  # Cookies 管理
-from config.logger import log_info, log_error  # ✅ 现在从 logger.py 引入日志
-from src.rotate_identity import get_random_user_agent  # 伪装身份
+from config.proxy import get_proxy  # ✅ 代理管理
+from config.cookies import get_cookies  # ✅ Cookies 统一管理
+from config.logger import log_info, log_error  # ✅ 日志从 logger.py 统一引入
+from src.rotate_identity import get_random_user_agent  # ✅ 伪装身份
 
 # =============================
 # 🔹 LinkedIn 目标搜索 URL
@@ -10,13 +10,21 @@ from src.rotate_identity import get_random_user_agent  # 伪装身份
 LINKEDIN_SEARCH_URL = "https://www.linkedin.com/search/results/people/?keywords=real%20estate%20agent%20australia"
 
 # =============================
-# 🔹 代理开关（主程序通过 settings.py 读取）
+# 🔹 代理开关（从 proxy.py 读取）
 # =============================
-USE_PROXY = True  # 设置为 False 则不使用代理
+USE_PROXY = True  # ✅ 全局代理开关
 
 
 # =============================
-# 🔹 伪装身份 Headers
+# 🔹 代理获取逻辑（scraper.py 可直接调用）
+# =============================
+def get_proxy():
+    """代理获取逻辑：如果启用，则返回代理，否则 None"""
+    return get_proxy() if USE_PROXY else None
+
+
+# =============================
+# 🔹 伪装身份（Headers 由 rotate_identity 处理）
 # =============================
 def get_headers():
     """生成随机 Headers（User-Agent + 语言）"""
@@ -28,18 +36,10 @@ def get_headers():
 
 
 # =============================
-# 🔹 代理获取逻辑
-# =============================
-def get_proxy():
-    """根据 USE_PROXY 开关决定是否返回代理"""
-    return get_random_proxy() if USE_PROXY else None
-
-
-# =============================
-# 🔹 数据库配置
+# 🔹 数据库配置（MySQL / SQLite 自动适配）
 # =============================
 DB_CONFIG = {
-    "type": "mysql",
+    "type": "mysql",  # "mysql" 或 "sqlite"
     "sqlite_path": "/opt/linkedin_scraper/database.db",
     "mysql": {
         "host": "localhost",
@@ -48,30 +48,3 @@ DB_CONFIG = {
         "database": "linkedin_scraper",
     },
 }
-
-# =============================
-# 🔹 日志配置（方便调试）
-# =============================
-LOG_FILE = "logs/scraper.log"
-
-if not os.path.exists("logs"):
-    os.makedirs("logs")
-
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-
-def log_info(message):
-    """记录 INFO 级别日志"""
-    logging.info(message)
-    print(f"[INFO] {message}")
-
-
-def log_error(message):
-    """记录 ERROR 级别日志"""
-    logging.error(message)
-    print(f"[ERROR] {message}")
