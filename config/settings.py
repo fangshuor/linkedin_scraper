@@ -1,8 +1,8 @@
-import logging
 import os
 from config.proxy import get_random_proxy  # 代理管理
 from config.cookies import get_cookies  # Cookies 管理
-from src.rotate_identity import get_identity  # 伪装身份
+from config.logger import log_info, log_error  # ✅ 现在从 logger.py 引入日志
+from src.rotate_identity import get_random_user_agent  # 伪装身份
 
 # =============================
 # 🔹 LinkedIn 目标搜索 URL
@@ -16,7 +16,19 @@ USE_PROXY = True  # 设置为 False 则不使用代理
 
 
 # =============================
-# 🔹 代理获取逻辑（主程序调用时使用）
+# 🔹 伪装身份 Headers
+# =============================
+def get_headers():
+    """生成随机 Headers（User-Agent + 语言）"""
+    return {
+        "User-Agent": get_random_user_agent(),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+    }
+
+
+# =============================
+# 🔹 代理获取逻辑
 # =============================
 def get_proxy():
     """根据 USE_PROXY 开关决定是否返回代理"""
@@ -24,25 +36,16 @@ def get_proxy():
 
 
 # =============================
-# 🔹 伪装身份（Headers 由 rotate_identity 处理）
-# =============================
-def get_headers():
-    """直接从 rotate_identity 获取完整 Headers"""
-    identity = get_identity()
-    return identity["headers"]
-
-
-# =============================
 # 🔹 数据库配置
 # =============================
 DB_CONFIG = {
-    "type": "mysql",  # "mysql" 或 "sqlite"
-    "sqlite_path": "database.db",
+    "type": "mysql",
+    "sqlite_path": "/opt/linkedin_scraper/database.db",
     "mysql": {
         "host": "localhost",
         "user": "root",
-        "password": "password",
-        "database": "linkedin_agents",
+        "password": "linkedin_scraper_pass",
+        "database": "linkedin_scraper",
     },
 }
 

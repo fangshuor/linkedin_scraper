@@ -1,8 +1,7 @@
 import random
 import time
-import platform
-from config.settings import log_info
-from config.proxy import get_proxy
+from config.logger import log_info  # ✅ 现在从 logger.py 引入日志
+from config.proxy import get_proxy  # ✅ 代理管理
 
 # =============================
 # 🔹 模拟不同的设备 & 浏览器环境
